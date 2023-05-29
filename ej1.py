@@ -1,15 +1,20 @@
 import argparse
-from scapy.all import *
-from scapy.all import DNSQR, DNS, IP, UDP, DNSRR
+# from scapy.all import *
+from scapy.all import DNSQR, DNS, IP, UDP, DNSRR, sr1, send
 import socket
 
 def handle_dns_packet(packet):
+    # chequeo si el campo DNSQR (query DNS) esta en el paquete y opcode == 0 lo cual indica una consulta estandar
     if DNSQR in packet and packet[DNS].opcode == 0:
+        # tomo direccion ip de origen 
         client_ip = packet[IP].src
+        # 
         client_port = packet[UDP].sport
+        #
         dns_query = packet[DNSQR].qname.decode('utf-8')
 
         # Enviar la consulta DNS al servidor DNS remoto
+        args = parser.parse_args()
         remote_dns_ip = args.server
         response_packet = sr1(IP(dst=remote_dns_ip)/UDP(dport=53)/DNS(rd=1, qd=DNSQR(qname=dns_query)), verbose=0)
 
@@ -21,7 +26,7 @@ def handle_dns_packet(packet):
                 del response_packet[DNS].ar
 
             # Enviar la respuesta modificada/sin modificar al cliente
-            send(IP(dst=client_ip)/UDP(sport=53, dport=client_port)/response_packet[DNS], verbose=0)
+        send(IP(dst=client_ip)/UDP(sport=53, dport=client_port)/response_packet[DNS], verbose=0)
 
 parser = argparse.ArgumentParser(description='Servidor DNS proxy')
 parser.add_argument('-s', '--server', help='Dirección IP del servidor DNS remoto', required=True)
@@ -40,3 +45,5 @@ if __name__ == '__main__':
         data, addr = dns_socket.recvfrom(1024)
         packet = IP(data)
         handle_dns_packet(packet)
+
+    # falta la vuelta 
