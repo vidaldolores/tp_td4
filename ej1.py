@@ -14,6 +14,8 @@ def handle_dns_packet(packet):
         # obtengo la query DNS del paquete y la decodifico de bytes a una cadena de texto
         dns_query = packet[DNSQR].qname.decode('utf-8')
 
+        print(f"[*] Query recibida: {dns_query} (de {client_ip}:{client_port})")
+
         # Enviar la consulta DNS al servidor DNS remoto
         args = parser.parse_args()
         # Obtiene la dirección IP del servidor DNS remoto a partir de los argumentos analizados
@@ -34,7 +36,10 @@ def handle_dns_packet(packet):
                 del response_packet[DNS].ar
 
             # Enviar la respuesta modificada/sin modificar al cliente
-        send(IP(dst=client_ip)/UDP(sport=53, dport=client_port)/response_packet[DNS], verbose=0)
+            send(IP(dst=client_ip)/UDP(sport=53, dport=client_port)/response_packet[DNS], verbose=0)
+            print(f"[*] Respondiendo {response_packet[DNSRR].rdata} (vía {args.server})")
+        else:
+            print("[*] No se recibió respuesta del servidor DNS remoto")
 
 parser = argparse.ArgumentParser(description='Servidor DNS proxy')
 parser.add_argument('-s', '--server', help='Dirección IP del servidor DNS remoto', required=True)
@@ -50,7 +55,9 @@ if __name__ == '__main__':
 
     # Procesar continuamente las consultas DNS
     while True:
+        print("chau")
         data, addr = dns_socket.recvfrom(1024)
+        print("hola")
+        # ERROR EN PONER IP
         packet = IP(data)
         handle_dns_packet(packet)
-
