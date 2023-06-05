@@ -5,7 +5,8 @@ import socket
 
 # Esta función se encarga de manejar las consultas DNS interceptadas
 def handle_dns_packet(packet):
-    # chequeo si el campo DNSQR (query DNS) esta en el paquete y opcode == 0, lo cual indica una consulta estandar
+ #chequeo si el campo DNSQR (query DNS) esta en el paquete y opcode == 0, lo cual indica una consulta estandar
+    #la parte client port, client ip, UDP no sirve. Hay q usar qname 
     if DNSQR in packet and packet[DNS].opcode == 0:
         # obtnego direccion ip de origen 
         client_ip = packet[IP].src
@@ -34,13 +35,19 @@ def handle_dns_packet(packet):
                 # Establece el contador de respuestas (ancount) en 1 para indicar que hay una respuesta modificada del response_packet
                 response_packet[DNS].ancount = 1
                 del response_packet[DNS].ar
-
+            #crear SOCKET sendto(packet, addr)
             # Enviar la respuesta modificada/sin modificar al cliente
             send(IP(dst=client_ip)/UDP(sport=53, dport=client_port)/response_packet[DNS], verbose=0)
             print(f"[*] Respondiendo {response_packet[DNSRR].rdata} (vía {args.server})")
         else:
+            #Si no spoofeas fowardeas
+            #socket2.sendto(data,(ip, nro de puerto))
+            #socket2.recvfrom(1024)
             print("[*] No se recibió respuesta del servidor DNS remoto")
-
+             #CREAR socket para el caso no respuesta: socket2.sendto(data,(ip, nro de puerto))
+             #este mismo socket recibe la respuesta
+            #socket2.recvfrom(1024)
+            #cerramos socket
 parser = argparse.ArgumentParser(description='Servidor DNS proxy')
 parser.add_argument('-s', '--server', help='Dirección IP del servidor DNS remoto', required=True)
 parser.add_argument('-d', '--mappings', help='Mapeos de dominio a IP (ej.: example.com=1.2.3.4)', nargs='*', default={})
@@ -61,3 +68,10 @@ if __name__ == '__main__':
         # ERROR EN PONER IP
         packet = IP(data)
         handle_dns_packet(packet)
+
+#notas: hay q crear un socket de respuesta, usar qname. Todo lo que dice client ip 
+# clien port y UDP no aporta nada, el handle no está bien implementado (no me dijieron que es lo que hay q cambiar igual)
+#crear SOCKET sendto(packet, addr) 
+#en que momento hay q predeterminar utdt= 1.1.1.1???? y donde?? 
+#el codigo no llega al handle! 
+#preguntar como codear bien los sockets que nos faltan
