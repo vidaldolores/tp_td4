@@ -2,6 +2,8 @@ import argparse
 # from scapy.all import *
 from scapy.all import DNSQR, DNS, IP, UDP, DNSRR, sr1, send
 import socket
+import remote
+
 
 # Esta función se encarga de manejar las consultas DNS interceptadas
 def handle_dns_packet(packet):
@@ -62,9 +64,9 @@ if __name__ == '__main__':
 
     # Procesar continuamente las consultas DNS
     while True:
-        print("chau")
+        print("Esperando consulta...")
         data, addr = dns_socket.recvfrom(1024)
-        print("hola")
+        print(f"Respondiendo {remote.DNS.IP}")
         # ERROR EN PONER IP
         packet = IP(data)
         handle_dns_packet(packet)
