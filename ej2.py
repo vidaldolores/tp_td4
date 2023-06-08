@@ -54,7 +54,7 @@ def handle_request(client_socket):
     
     if redirect_url:
         # Envía una respuesta de redirección HTTP/1.1 302
-        response = f'HTTP/1.1 302 Found\r\nLocation: {redirect_url}\r\n\r\n'
+        response = f'[*] Request GET recibido (Host: {redirect_url})\r\n\r\n'
     else:
         # Envía una respuesta de error HTTP/1.1 404
         response = 'HTTP/1.1 404 Not Found\r\n\r\n<h1>404 Not Found</h1>'
@@ -68,7 +68,7 @@ def run_server():
     server_socket.bind(('localhost', 8080))
     server_socket.listen(1)
     
-    print('Servidor HTTP/1.1 en ejecución en http://localhost:8080')
+    print('[*] Request GET recibido (Host: {}) \n[*] Respondiendo redirección hacia https://www.google.com')
     
     while True:
         client_socket, address = server_socket.accept()

@@ -92,6 +92,7 @@ def send_packet(packet, servidor, puerto):
     response = resolver.recv(1024)
     return response
 
+
 # Esta función se encarga de manejar las consultas DNS interceptadas
 def handle_dns_packet(packet, servidor, puerto, dest_ips, dest):
     if DNSQR in packet and packet[DNS].opcode == 0:
@@ -102,23 +103,28 @@ def handle_dns_packet(packet, servidor, puerto, dest_ips, dest):
 
         args = parser.parse_args()
 
-        if response_packet:
-            if dominio in dest:
+
+        #if response_packet:
+        if dominio in dest:
                 dest_ip = dest_ips[dest.index(dominio)]
                 print(f'[*] Respondiendo {dest_ip} (predeterminado)')
-            else:
+        else:
                 response_packet = send_packet(packet, servidor, puerto)
                 response_packet = IP(response_packet)
                 response_packet[DNS].an = DNSRR(rrname=dns_query, rdata=args.mappings[dns_query])
                 response_packet[DNS].ancount = 1
                 del response_packet[DNS].ar
 
-                response_packet = bytes(response_packet)
-                response_packet = response_packet[:2] + bytes([len(response_packet) - 2]) + response_packet[3:]
+                #response_packet = bytes(response_packet)
+                #response_packet = response_packet[:2] + bytes([len(response_packet) - 2]) + response_packet[3:]
 
-            print(f"[*] Respondiendo {response_packet[DNSRR].rdata} (vía {servidor}:{puerto})")
-        else:
-            print("[*] No se recibió respuesta del servidor DNS remoto")
+        print(f"[*] Respondiendo {response_packet[DNSRR].rdata} (vía {servidor}:{puerto})")
+        
+        response_packet = bytes(response_packet)
+        response_packet = response_packet[:2] + bytes([len(response_packet) - 2]) + response_packet[3:]
+        
+    else:
+        print("[*] No se recibió respuesta del servidor DNS remoto")
 
 
 parser = argparse.ArgumentParser(description='Servidor DNS proxy')
@@ -144,3 +150,5 @@ while True:
     packet = IP(data)
     handle_dns_packet(packet, servidor, puerto, dest_ips, dest)
     print(f"Respondiendo {addr}")
+    
+    
