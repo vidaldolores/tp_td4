@@ -71,7 +71,7 @@ if __name__ == '__main__':
         print(f"Respondiendo {addr}")
         # ERROR EN PONER IP
         
-'''
+
 #notas: hay q crear un socket de respuesta, usar qname. Todo lo que dice client ip 
 # clien port y UDP no aporta nada, el handle no está bien implementado (no me dijieron que es lo que hay q cambiar igual)
 #crear SOCKET sendto(packet, addr) 
@@ -150,5 +150,76 @@ while True:
     packet = IP(data)
     handle_dns_packet(packet, servidor, puerto, dest_ips, dest)
     print(f"Respondiendo {addr}")
-    
-    
+'''
+import argparse
+from scapy.all import DNSQR, DNS, IP, UDP, DNSRR, send, sr1
+import socket
+
+# Función para enviar un paquete al cliente
+def send_packet(packet, servidor, puerto):
+    dns_query = str(packet[DNSQR].qname, 'utf-8')
+    dns_packet = IP(dst=servidor) / UDP(dport=puerto) / packet[DNS]
+    response_packet = sr1(dns_packet, verbose=0, timeout=1)
+    return response_packet
+
+def handle_dns_packet(packet, addr, servidor, puerto, dest_ips, dest):
+    if DNSQR in packet and packet[DNS].opcode == 0:
+        dns_query = str(packet[DNSQR].qname, 'utf-8')
+        dominio = dns_query.split('.')[0]
+
+        print(f"[*] Query recibida: {dns_query} (de {packet[IP].src}:{packet[UDP].sport})")
+
+        if dominio in dest:
+            dest_ip = dest_ips[dest.index(dominio)]
+            print(f'[*] Respondiendo {dest_ip} (predeterminado)')
+
+            response_packet = IP(dst=packet[IP].src, src=packet[IP].dst) / UDP(dport=packet[UDP].sport, sport=packet[UDP].dport) / DNS(
+                id=packet[DNS].id,
+                qr=1,
+                aa=1,
+                qd=packet[DNS].qd,
+                an=DNSRR(rrname=dns_query, rdata=dest_ip)
+            )
+
+            send(response_packet, verbose=0)
+
+        else:
+            response_packet = send_packet(packet, servidor, puerto)
+            if response_packet:
+                response_packet = IP(str(response_packet[0]))
+                response_packet[DNS].an = DNSRR(rrname=dns_query, rdata=response_packet[DNS].an.rdata)
+                response_packet[DNS].ancount = 1
+                del response_packet[DNS].ar
+
+                print(f"[*] Respondiendo {response_packet[DNSRR].rdata} (vía {servidor})")
+
+                send(response_packet, verbose=0)
+            else:
+                print("[*] No se recibió respuesta del servidor DNS remoto")
+
+    else:
+        print("[*] No se recibió respuesta del servidor DNS remoto")
+
+parser = argparse.ArgumentParser(description='Servidor DNS proxy')
+parser.add_argument('-s', '--server', help='Dirección IP del servidor DNS remoto', required=True)
+parser.add_argument('-d', '--mappings', help='Mapeos de dominio a IP (ej.: example.com=1.2.3.4)', nargs='+', default={})
+args = parser.parse_args()
+
+servidor = args.server
+puerto = 53
+
+dest_ips = [item.split(':')[1] for item in args.mappings]
+dest = [item.split(':')[0] for item in args.mappings]
+
+print(f'Servidor DNS proxy iniciado. Escuchando consultas DNS en {servidor}...')
+
+# Configurar socket UDP para recibir consultas DNS
+dns_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+dns_socket.bind(('0.0.0.0', puerto))
+
+while True:
+    print("Esperando consulta...")
+    data, addr = dns_socket.recvfrom(1024)
+    packet = IP(data)
+    handle_dns_packet(packet, addr, servidor, puerto, dest_ips, dest)
+    print(f"Respondiendo {addr}")
