@@ -1,76 +1,71 @@
 import argparse
 import socket
 
-def create_response(status_code, status_text, headers, body=None):
-    response = f"HTTP/1.1 {status_code} {status_text}\r\n"
-    for key, value in headers.items():
-        response += f"{key}: {value}\r\n"
-    response += "\r\n"
-    if body:
-        response += body
-    return response.encode("utf-8")
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='HTTP Redirector')
+    parser.add_argument('-r', '--redirect', nargs='+', action='append', help='Define a redirect rule in the format "host:location"')
+    parser.add_argument('-p', '--port', type=int, default=8080, help='Port to run the server on (default: 8080)')
+    return parser.parse_args()
+
+def create_redirects(rules):
+    redirects = {}
+    if rules:
+        for rule in rules:
+            if len(rule) == 2:
+                host, location = rule
+                redirects[host] = location
+    return redirects
 
 def handle_request(client_socket, redirects):
-    request_data = client_socket.recv(1024).decode("utf-8")
-    request_lines = request_data.split("\r\n")
-    request_line = request_lines[0]
-    request_method, request_path, request_protocol = request_line.split()
+    # Recibo lo que me envió el cliente y lo decodifico
+    request_data = client_socket.recv(4096).decode('utf-8')
 
-    headers = {}
-    for line in request_lines[1:]:
-        if line:
-            key, value = line.split(": ", 1)
-            headers[key] = value
+    # Extraigo el host de la solicitud
+    host = None
+    for line in request_data.split('\r\n'):
+        if line.startswith('Host: '):
+            host = line[6:]
+            break
 
-    host_header = headers.get("Host", "")
-    if request_method == "GET" and host_header:
-        for redirect in redirects:
-            domain, target = redirect.split(":")
-            if host_header.strip() == domain.strip():
-                response_headers = {
-                    "Location": target.strip(),
-                    "Connection": "close"
-                }
-                response = create_response(301, "Moved Permanently", response_headers)
-                client_socket.sendall(response)
-                print(f"[*] Request GET recibido (Host: {host_header})")
-                print(f"[*] Respondiendo redirección hacia {target}")
-                client_socket.close()
-                return
-
-    response_headers = {
-        "Content-Type": "text/html",
-        "Connection": "close"
-    }
-    response_body = "<h1>404 Not Found</h1>"
-    response = create_response(404, "Not Found", response_headers, response_body)
-    client_socket.sendall(response)
-    print(f"[*] Request GET recibido (Host: {host_header})")
-    print("[*] Respondiendo 404 Not Found")
+    if host in redirects:
+        new_location = redirects[host]
+        print(f'[*] Request GET recibido (Host: {host})')
+        print(f'[*] Respondiendo redirección hacia {new_location}')
+        response = (
+            'HTTP/1.1 301 Moved Permanently\r\n'
+            'Location: {}\r\n'
+            'Connection: close\r\n\r\n'.format(new_location)
+        )
+        client_socket.sendall(response.encode('utf-8'))
+    else:
+        response = (
+            'HTTP/1.1 404 Not Found\r\n'
+            'Connection: close\r\n\r\n'
+        )
+        client_socket.sendall(response.encode('utf-8'))
 
     client_socket.close()
 
-def start_server(host, port, redirects):
+def run_server(port, redirects):
+    # Creo un socket del servidor
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind((host, port))
+    # Lo enlazo a una dirección y un puerto
+    server_socket.bind(('localhost', port))
+    # Escucho en el socket del servidor para conexiones entrantes
     server_socket.listen(1)
-    print(f"Server listening on {host}:{port}")
+    print(f'Servidor en ejecución en el puerto {port}...')
 
     while True:
+        # Acepto la conexión entrante
         client_socket, client_address = server_socket.accept()
-        print(f"Received connection from {client_address[0]}:{client_address[1]}")
         handle_request(client_socket, redirects)
 
+    server_socket.close()
+
 def main():
-    parser = argparse.ArgumentParser(description='Servidor HTTP')
-    parser.add_argument('-r', '--redirects', help='Dominios redirigidos en formato dominio:destino', nargs='+', required=True)
-    args = parser.parse_args()
+    args = parse_arguments()
+    redirects = create_redirects(args.redirect)
+    run_server(args.port, redirects)
 
-    redirects = args.redirects
-
-    start_server("127.0.0.1", 8080, redirects)
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
-
