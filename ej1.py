@@ -69,9 +69,4 @@ if __name__ == '__main__':
         packet = IP(data)
         handle_dns_packet(packet)
 
-#notas: hay q crear un socket de respuesta, usar qname. Todo lo que dice client ip 
-# clien port y UDP no aporta nada, el handle no está bien implementado (no me dijieron que es lo que hay q cambiar igual)
-#crear SOCKET sendto(packet, addr) 
-#en que momento hay q predeterminar utdt= 1.1.1.1???? y donde?? 
-#el codigo no llega al handle! 
-#preguntar como codear bien los sockets que nos faltan
+
