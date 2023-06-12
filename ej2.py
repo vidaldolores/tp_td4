@@ -1,199 +1,88 @@
-import socket
-import argparse
-'''
-def handle_request(request):
-    if 'Host: www.uba.ar' in request:
-        response = 'HTTP/1.1 301 Moved Permanently\r\n'
-        response += 'Location: https://www.utdt.edu\r\n'
-        response += '\r\n'
-    else:
-        response = 'HTTP/1.1 200 OK\r\n'
-        response += 'Content-Type: text/html\r\n'
-        response += '\r\n'
-        response += 'Hello, World!'
-    return response
-
-def run_server():
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('localhost', 8080))
-    server_socket.listen(1)
-    print('Servidor en ejecución en http://localhost:8080')
-
-    while True:
-        client_socket, address = server_socket.accept()
-        request = client_socket.recv(1024).decode('utf-8')
-
-        if request:
-            response = handle_request(request)
-            client_socket.sendall(response.encode('utf-8'))
-
-        client_socket.close()
-
-run_server()
-
-
-def handle_request(client_socket):
-    request = client_socket.recv(1024).decode('utf-8')
-    request_lines = request.split('\r\n')
-    
-    # Obtiene la URL de la solicitud GET
-    url = None
-    for line in request_lines:
-        if line.startswith('GET'):
-            url = line.split(' ')[1]
-            break
-    
-    parser = argparse.ArgumentParser(description='Servidor HTTP')
-    parser.add_argument('-r', '--redirects', help='Dominios redirigidos en formato dominio:destino', nargs='+', required=True)
-    args = parser.parse_args()
-
-    redirects = args.redirects
-
-    
-    # Obtiene la URL de redirección correspondiente
-    redirect_url = redirects.get(url)
-    
-    if redirect_url:
-        # Envía una respuesta de redirección HTTP/1.1 302
-        response = f'[*] Request GET recibido (Host: {redirect_url})\r\n\r\n'
-    else:
-        # Envía una respuesta de error HTTP/1.1 404
-        response = 'HTTP/1.1 404 Not Found\r\n\r\n<h1>404 Not Found</h1>'
-    
-    # Envía la respuesta al cliente
-    client_socket.sendall(response.encode('utf-8'))
-    client_socket.close()
-
-def run_server():
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('localhost', 8080))
-    server_socket.listen(1)
-    
-    print('[*] Request GET recibido (Host: {}) \n[*] Respondiendo redirección hacia {}')
-    
-    while True:
-        client_socket, address = server_socket.accept()
-        handle_request(client_socket)
-
-run_server()
-
-
-
 import argparse
 import socket
+from scapy.all import Raw
+from scapy.layers.http import *
 
-def handle_request(client_socket, redirects):
-    request = client_socket.recv(1024).decode('utf-8')
-    request_lines = request.split('\r\n')
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='HTTP Redirector')
+    parser.add_argument('-r', '--redirect', action='append', default=[], help='Define a redirect rule in the format "host:location"')
+    parser.add_argument('-d', '--lista_archivo', action='append', default=[], help='')
+    parser.add_argument('-c', '--archivo', help='')
+   
+    return parser.parse_args()
 
-    # Obtiene el header "Host" de la solicitud GET
-    host_header = None
-    for line in request_lines:
-        if line.startswith('GET'):
-            host_header = line.split(' ')[1]
-            break
-    
-    if host_header:
-        # Imprime la solicitud GET recibida
-        print(f'[*] Request GET recibido (Host: {host_header})')
-
-        # Obtiene la URL de redirección correspondiente
-        redirect_url = redirects.get(host_header)
-
-        if redirect_url:
-            # Imprime la respuesta de redirección
-            print(f'[*] Respondiendo redirección hacia {redirect_url}')
-
-            # Envía una respuesta de redirección HTTP/1.1 302
-            response = f'HTTP/1.1 302 Found\r\nLocation: {redirect_url}\r\n\r\n'
-        else:
-            # Envía una respuesta de error HTTP/1.1 404
-            response = 'HTTP/1.1 404 Not Found\r\n\r\n<h1>404 Not Found</h1>'
-    else:
-        # Envía una respuesta de error HTTP/1.1 400 si no se encuentra el header "Host"
-        response = 'HTTP/1.1 400 Bad Request\r\n\r\n<h1>400 Bad Request</h1>'
-
-    # Envía la respuesta al cliente
-    client_socket.sendall(response.encode('utf-8'))
-    client_socket.close()
-
-
-def run_server(redirects):
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('localhost', 8080))
-    server_socket.listen(1)
-
-    print('[*] Servidor HTTP en ejecución')
-
-    while True:
-        client_socket, address = server_socket.accept()
-        handle_request(client_socket, redirects)
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Servidor HTTP')
-    parser.add_argument('-r', '--redirects', help='Dominios redirigidos en formato dominio:destino', nargs='+', required=True)
-    args = parser.parse_args()
-
+def create_redirects(rules):
     redirects = {}
-    for redirect in args.redirects:
-        domain, destination = redirect.split(':')
-        redirects[domain] = destination
+    print(rules)
+    if rules:
+        for rule in rules:
+            desde, hastaHTTPS, hasta = rule.split(":")
+            host = desde
+            location = hastaHTTPS + ':' + hasta
+            redirects[host] = location
+    return redirects
 
-    run_server(redirects)
-
-'''
-
-import argparse
-import socket
-
-def handle_request(client_socket, redirects):
-    request = client_socket.recv(1024).decode('utf-8')
-    request_lines = request.split('\r\n')
-
-    # Obtiene el dominio de la solicitud GET
-    domain = None
-    for line in request_lines:
-        if line.startswith('Host:'):
-            domain = line.split(' ')[1]
-            break
-
-    # Obtiene la URL de redirección correspondiente
-    redirect_url = redirects.get(domain)
-
-    if redirect_url:
-        # Envía una respuesta de redirección HTTP/1.1 301
-        response = f'HTTP/1.1 301 Moved Permanently\r\nLocation: {redirect_url}\r\n\r\n'
-        print(f'[*] Request GET recibido (Host: {domain})')
-        print(f'[*] Respondiendo redirección hacia {redirect_url}')
+def handle_request(request_data, redirects, client_socket, recive_archivo):
+    # Recibo lo que me envió el cliente y lo decodifico
+   
+    scapy_pkt = HTTP(request_data) #IGUAL
+    raw = Raw(scapy_pkt) #IGUAL
+    payload = (raw[Raw].load).decode() #IGUAL
+   
+    if 'GET' in payload:
+        splits = payload.split(' ')
+        for x in splits:
+            if x.startswith('www.'):
+                host = x
+        host = host.strip()
+        
+    if host in redirects.keys():
+        new_location = redirects[host]
+        print(f'[*] Request GET recibido (Host: {host})')
+        print(f'[*] Respondiendo redirección hacia {new_location}')
+        response = (
+            'HTTP/1.1 301 Moved Permanently\r\n'
+            'Location: {}\r\n'
+            'Connection: close\r\n\r\n'.format(new_location)
+        )
+        client_socket.sendall(bytes_encode(response))
+    elif host in recive_archivo:
+        with open(archivo, 'r') as file:
+            html_content:str = file.read()
+        response = (
+            'HTTP/1.1 200\r\n'
+            "Content-Type: text/html\r\n\r\n"
+        )
+        response += html_content
+        client_socket.sendall(bytes_encode(response))
     else:
-        # Envía una respuesta de error HTTP/1.1 404
-        response = 'HTTP/1.1 404 Not Found\r\n\r\n<h1>404 Not Found</h1>'
-    
-    # Envía la respuesta al cliente
-    client_socket.sendall(response.encode('utf-8'))
-    client_socket.close()
-
-def run_server(redirects):
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('localhost', 8080))
-    server_socket.listen(1)
-    
-    print('[*] Servidor HTTP en ejecución')
-
-    while True:
-        client_socket, address = server_socket.accept()
-        handle_request(client_socket, redirects)
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Servidor HTTP')
-    parser.add_argument('-r', '--redirects', help='Dominios redirigidos en formato dominio:destino', nargs='+', required=True)
-    args = parser.parse_args()
-
-    redirects = {}
-    for redirect in args.redirects:
-        domain, destination = redirect.split(':')
-        redirects[domain] = destination
-
-    run_server(redirects)
+        response = (
+            'HTTP/1.1 301 Moved Permanently\r\n'
+            'Location: {}\r\n'
+            'Connection: close\r\n\r\n https://'.format(host)
+           
+        )
+        client_socket.sendall(bytes_encode(response))
 
 
+   
+
+
+args = parse_arguments()
+redirects = create_redirects(args.redirect)
+recive_archivo = set(args.lista_archivo)
+archivo = args.archivo
+port = 80
+# Creo un socket del servidor
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# Lo enlazo a una dirección y un puerto
+server_socket.bind(('0.0.0.0', port))
+# Escucho en el socket del servidor para conexiones entrantes
+server_socket.listen()
+print(f'Servidor en ejecución en el puerto {port}...')
+client_socket, client_address = server_socket.accept()
+
+while True:
+    # Acepto la conexión entrante
+    request_data = client_socket.recv(1024)
+    handle_request(request_data, redirects, client_socket, recive_archivo)
