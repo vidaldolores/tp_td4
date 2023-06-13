@@ -1,0 +1,211 @@
+Lola Vidal - Milena Fuchs - Chantal Levi
+                                    Trabajo Práctico 
+                                   Tecnología Digital 4
+
+Parte 1: 
+
+ 1. Investigar cómo configurar el servidor DNS local en el sistema operativo donde estén trabajando. ¿Qué pasos deben seguirse para tal fin?
+
+En Windows: 
+Para configurar un servidor DNS local en Windows, puedes seguir los siguientes pasos:
+1. Abrir el "Panel de control" de Windows.
+2. Ir a  "Redes e Internet" y luego hacia"Centro de redes y recursos compartidos".
+3. En el panel izquierdo, seleccionar "Cambiar configuración del adaptador".
+4. Hacer clic derecho en el adaptador de red que estés utilizando y seleccionar "Propiedades".
+5. En la ventana de propiedades, seleccionar "Protocolo de Internet versión 4 (TCP/IPv4)" y luego tocar el botón "Propiedades".
+6. Seleccionar la opción "Usar las siguientes direcciones de servidor DNS".
+7. Ingresar la dirección IP del servidor DNS que quieras configurar en el campo "Servidor DNS preferido". Como lo estamos haciendo para nuestro propio equipo la dirección sería IP "127.0.0.1" o la dirección IP asignada a tu adaptador de red.
+9. Hacer clic en  "Aceptar".
+
+ 2. ¿Qué significado tiene la dirección IP 127.0.0.1?
+
+127.0.0.1 es una dirección en la cual ningún paquete de datos dirigido a esta debe salir de la computadora host. Si se envía un paquete hacia esta dirección, en lugar de enviarse a la red local o a Internet, simplemente se "reenvía" sobre sí mismo, y la computadora que envía el paquete se convierte en el destinatario. 
+Se utiliza localhost como nombre arbitrario para referirse a la IP 127.0.0.1.
+
+ 3. A partir de todo lo anterior, ejecutar el proxy DNS y colocar la dirección IP 127.0.0.1 como servidor DNS local del sistema operativo. Abrir un navegador web a elección y navegar a www.google.com. ¿Qué se observa en la consola del proxy DNS? ¿El navegador web logró mostrar la página de inicio de Google? 
+    Consola: 
+
+Esperando consulta...
+[*] Query recibida: www.google.com (de 127.0.0.1:53238)
+[*] Respondiendo 50.2.104.51 (vía 8.8.8.8)
+Respondiendo ('127.0.0.1', 53238)
+Esperando consulta...
+[*] Query recibida: www.google.com (de 127.0.0.1:65284)
+[*] Respondiendo 0.0.32.4 (vía 8.8.8.8)
+Respondiendo ('127.0.0.1', 65284)
+Esperando consulta...
+[*] Query recibida: www.google.com (de 127.0.0.1:58761)
+[*] Respondiendo 142.251.134.36 (vía 8.8.8.8)
+Respondiendo ('127.0.0.1', 58761)
+Esperando consulta…
+
+
+Navegador:
+
+
+
+ 4. Dejar que transcurra cierto tiempo hasta que aparezca algún otro log en la consola del proxy DNS. ¿A qué pueden deberse estas queries? 
+    Luego de cierto tiempo aparece de nuevo queries a www.google.com como las siguientes: 
+
+Esperando consulta...
+[*] Query recibida: www.google.com (de 127.0.0.1:53238)
+[*] Respondiendo 50.2.104.51 (vía 8.8.8.8)
+Respondiendo ('127.0.0.1', 53238)
+
+Esperando consulta...
+[*] Query recibida: www.google.com (de 127.0.0.1:65284)
+[*] Respondiendo 0.0.32.4 (vía 8.8.8.8)
+Respondiendo ('127.0.0.1', 65284)
+
+Esperando consulta...
+[*] Query recibida: www.google.com (de 127.0.0.1:58761)
+[*] Respondiendo 142.250.79.132 (vía 8.8.8.8)
+Respondiendo ('127.0.0.1', 58761)
+
+Esperando consulta…
+
+Pasa más tiempo y repite:
+
+Esperando consulta…
+[*] Query recibida: www.google.com (de 127.0.0.1:53238)
+[*] Respondiendo 50.2.104.51 (vía 8.8.8.8)
+Respondiendo ('127.0.0.1', 53238)
+Esperando consulta…
+
+[*] Query recibida: www.google.com (de 127.0.0.1:65284)
+[*] Respondiendo 0.0.32.4 (vía 8.8.8.8)
+Respondiendo ('127.0.0.1', 65284)
+
+Esperando consulta…
+[*] Query recibida: www.google.com (de 127.0.0.1:58761)
+[*] Respondiendo 142.251.134.36 (vía 8.8.8.8)
+Respondiendo ('127.0.0.1', 58761)
+
+Esperando consulta…
+
+Esto se debe a que Los navegadores web y otros clientes de Internet a menudo realizan consultas periódicas a los servidores DNS para resolver los nombres de dominio, especialmente para los sitios que se visitan con frecuencia como "www.google.com". 
+
+Algunas razones podrian ser: 
+
+TTL (Time To Live): Cada respuesta DNS tiene un tiempo de vida, o TTL (Time To Live), que indica cuánto tiempo se puede almacenar en caché la respuesta antes de que se necesite realizar una nueva consulta. Cada registro DNS tiene un TTL asociado, y este es el tiempo que se permite a los clientes de DNS cachear la respuesta. Una vez que el TTL ha expirado, se requiere una nueva consulta DNS para obtener la dirección IP más actual. Por lo tanto, si el TTL es corto, podríamos ver consultas frecuentes al mismo dominio. 
+
+
+Navegación web: Si navegamos por la web y visitamos páginas que hacen referencia a "www.google.com" (por ejemplo, si estamos utilizando el motor de búsqueda de Google), el navegador puede necesitar realizar consultas DNS adicionales.
+
+
+Recursos de terceros: Muchos sitios web utilizan recursos alojados en "www.google.com" (como scripts de Google Analytics, Google Fonts, etc.). Cada vez que visitamos uno de estos sitios, el navegador puede necesitar realizar una consulta DNS para "www.google.com".
+
+
+Peticiones de fondo: el navegador o sistema operativo pueden estar realizando peticiones en segundo plano a "www.google.com". Por ejemplo, si estamos utilizando Google Chrome, puede estar comprobando actualizaciones o sincronizando información con tu cuenta de Google.
+
+Balanceo de carga: Los grandes servicios de Internet como Google tienen múltiples servidores en todo el mundo. Cuando hacemos una consulta DNS para www.google.com, el servidor DNS puede devolvernos la dirección IP de diferentes servidores en diferentes momentos para balancear la carga entre ellos.
+
+Servicios CDN (Content Delivery Network): Las empresas como Google utilizan CDNs para entregar contenido a los usuarios de forma más rápida y confiable. Los CDNs tienen múltiples servidores en diferentes ubicaciones geográficas. Cuando hacemos una consulta DNS, el CDN puede redirigir a diferentes servidores basándose en factores como la ubicación geográfica, la carga del servidor y la salud del servidor.
+
+5. Repetir la pregunta 3. ejecutando el proxy DNS con un mapeo predeterminado de www.google.com a la dirección IP de www.infobae.com. ¿Qué sucede en este caso? ¿Por qué?
+
+Respuesta:
+
+Esperando consulta...
+[*] Query recibida: www.google.com (de 127.0.0.1:26500)
+[*] Respondiendo 192.168.0.1 (predeterminado)
+Respondiendo ('127.0.0.1', 26500)
+
+Esperando consulta...
+[*] Query recibida: www.google.com (de 127.0.0.1:11473)
+[*] Respondiendo 192.168.0.1 (predeterminado)
+Respondiendo ('127.0.0.1', 11473)
+
+Esperando consulta...
+[*] Query recibida: www.google.com (de 127.0.0.1:50412)
+[*] Respondiendo 192.168.0.1 (predeterminado)
+Respondiendo ('127.0.0.1', 50412)
+
+Esperando consulta...
+[*] Query recibida: www.google.com (de 127.0.0.1:47973)
+[*] Respondiendo 192.168.0.1 (predeterminado)
+Respondiendo ('127.0.0.1', 47973)
+
+Esperando consulta…
+
+Lo que sucede es que el script de proxy DNS está interceptando las consultas DNS para "www.google.com" y, en lugar de enviarlas al servidor DNS remoto, está respondiendo con la dirección IP que proporcionamos como predeterminada (en este caso, 192.168.0.1, que supuestamente es la dirección IP de www.infobae.com).
+
+Cuando un cliente en el sistema operativo (como un navegador web) intenta resolver "www.google.com", la consulta se envía a tu proxy DNS. El proxy DNS ve que esta consulta es para "www.google.com", que es uno de los dominios para los que hemos proporcionado un mapeo predeterminado. En lugar de enviar la consulta al servidor DNS remoto (8.8.8.8), el proxy DNS simplemente responde con la dirección IP que proporcionamos (192.168.0.1).
+
+No obstante, no se abre la pagina de infobae ya que aunque la consulta DNS para "www.google.com" esté devolviendo la dirección IP de "www.infobae.com", el servidor web de Infobae no está configurado para responder a las solicitudes para "www.google.com". 
+Cuando el navegador solicita "www.google.com", se conecta a la dirección IP correcta (la de Infobae en este caso), pero todavía solicita el recurso para "www.google.com". Como el servidor de Infobae no está configurado para responder a las solicitudes para "www.google.com", se produce un error o se muestra una página no encontrada.
+
+Este tipo de redirección DNS a menudo se utiliza en ataques de phishing o de hombre en el medio, donde un atacante controla el DNS y puede redirigir el tráfico a un servidor que controla. Sin embargo, para que funcione correctamente, el servidor al que se redirige el tráfico debe estar configurado para responder a las solicitudes para el dominio original.
+
+Parte 2: 
+
+1. Ejecutar el servidor HTTP y en otra consola utilizar netcat para conectarse al mismo y reproducir el tercer ejemplo de la sección 2.2.2. Transcribir los intercambios de mensajes HTTP. ¿Se obtuvo el funcionamiento esperado? 
+
+
+Si, se obtuvo el funcionamiento esperado
+Consola de Visual: 
+PS C:\Users\Omar\Documents\MILE\Di Tella\3ero\TD4\tp_td4-main> python ej2.py -c content.html -d www.infobae.com -r www.uba.ar:https://www.utdt.edu
+['www.uba.ar:https://www.utdt.edu']
+Servidor en ejecución en el puerto 80...
+[*] Request GET recibido (Host: www.infobae.com)
+[*] Respondiendo contenido del archivo content.html
+[*] Request GET recibido (Host: www.uba.ar)
+[*] Respondiendo redirección hacia https://www.utdt.edu
+[*] Request GET recibido (Host: www.google.com)
+[*] Respondiendo redirección hacia www.google.com
+
+Consola usando netcat:
+C:\Users\Omar>ncat 127.0.0.1 80
+GET/HTTP/1.1 Host: www.infobae.com
+HTTP/1.1 200
+Content-Type: text/html
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Contenido HTML</title>
+</head>
+<body>
+  <h1>Hola, este es mi contenido HTML</h1>
+  <p>Este es un p├â┬írrafo de ejemplo.</p>
+</body>
+</html>
+GET/HTTP/1.1 Host: www.uba.ar
+HTTP/1.1 301 Moved Permanently
+Location: https://www.utdt.edu
+Connection: close
+
+GET/HTTP/1.1 Host: www.google.com
+HTTP/1.1 301 Moved Permanently
+Location: www.google.com
+Connection: close
+
+
+2. Intentar reproducir alguno de estos ejemplos desde un navegador web. ¿Por qué no es posible hacerlo? 
+
+No es posible ya que el servidor HTTP implementado en el código no utiliza un enfoque estándar para la comunicación HTTP. El servidor utiliza sockets y manipulación de datos de bajo nivel para recibir y enviar datos HTTP. El código que implementamos es solo una implementación básica de un servidor HTTP.
+
+3. Pensar y ejecutar una manera de interactuar con el servidor HTTP desde un navegador web. ¿Qué URL deberíamos utilizar en el navegador?
+
+Para interactuar desde un navegador web deberíamos usar http://localhost:80 como URL ya que estamos enviando paquetes hacia nuestra propia computadora (utilizamos la dirección 127.0.0.1). 
+Al ingresar esta URL desde algún navegador web, se establece una conexión con el servidor HTTP y se envía una solicitud GET. El servidor procesa la solicitud y genera una respuesta.
+
+Parte 3: 
+
+ 1. Como hicimos en la primera parte, configurar el sistema operativo local de modo tal que las consultas DNS se resuelvan a través de nuestro proxy DNS. Ejecutar ambos servidores y reconsiderar nuevamente la pregunta 2 de la sección 2.2.3: ¿Cómo podemos capitalizar la funcionalidad del proxy DNS para poder interactuar con el redirector HTTP desde un navegador web utilizando dominios arbitrarios? 
+
+Para poder interactuar con el redirector HTTP desde un navegador web utilizando dominios arbitrarios, hay que cambiar la configuración actual de los servidores DNS por la dirección IP y el puerto del servidor DNS proxy que creamos. 
+Una vez configurado el sistema operativo local, se puede interactuar con el redirector HTTP desde un navegador web utilizando dominios arbitrarios:
+Primero hay que abrir un navegador web. Ingresamos el dominio que queremos usar para redirigir la solicitud HTTP.  Después, enviamos la solicitud al servidor DNS proxy. El servidor DNS proxy recibe la consulta DNS para el dominio que especificamos. Si el dominio está configurado como una regla de redirección en el proxy DNS, el proxy va a responder con una redirección HTTP a la ubicación especificada en la regla. Por último, el navegador web va a seguir la redirección y va a mostrar la página o recurso correspondiente.
+
+
+ 2. En el contexto de una LAN a elección, configurar un host h para que resuelva consultas DNS a través de otro host h’ donde esté en ejecución nuestro proxy DNS y nuestro redirector HTTP. Abrir un navegador web en h e intentar recrear alguno de los ejemplos del punto anterior. ¿Se obtuvo el funcionamiento esperado? 
+
+Si, ya que podemos ver la redirección en el navegador web del host h.
+
+
+ 3.  Reconsiderar el experimento del punto anterior ejecutando el proxy DNS en un host h’ de la LAN y el redirector HTTP en otro host h’’ distinto. ¿Se obtuvo el funcionamiento esperado?
+
+Deberíamos obtener el funcionamiento esperado y ver las redirecciones en el navegador web de h'' al realizar las solicitudes HTTP.
+
+	
