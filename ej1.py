@@ -1,5 +1,5 @@
 import argparse  
-from scapy.all import DNSQR, DNS, IP, UDP, DNSRR, send, sr1  
+from scapy.all import DNSQR, DNS, IP, UDP, DNSRR, send, sr1, raw
 import socket  
 
 # Creamos una función para enviar el paquete al servidor DNS remoto
@@ -25,31 +25,35 @@ def handle_dns_packet(packet, addr, servidor, puerto, dest_ips, dest):
     if DNSQR in packet and packet[DNS].opcode == 0:  #Verificamos si el paquete contiene una consulta DNS y  si el opcode es 0, lo cual sucede si es una consulta estandar
         dns_query = packet[DNSQR].qname.decode()  #Si el opcode es 0, obtenemos la consulta DNS como un string
         dns_query = dns_query[:-1]  #Eliminamos el punto final de la consulta DNS
-        dominio = dns_query.split()[0]  #Obtenemos el nombre de dominio de la consulta
+        dominio = dns_query #Obtenemos el nombre de dominio de la consulta
 
         print(f"[*] Query recibida: {dominio} (de {addr[0]}:{addr[1]})")
 
         if dominio not in dest:  #Verificamos si el dominio no está en la lista de destinos
-            response_data = send_packet(data, servidor, puerto)  #Si no esta, enviamos la consulta al servidor DNS remoto
+            response_packet = send_packet(data, servidor, puerto)  #Si no esta, enviamos la consulta al servidor DNS remoto
+            response_data = DNS(response_packet)
             direc_ip = extraer_direc_ip(response_data)  #Extraemos la dirección IP de la respuesta
+            try: 
+                direc_ip = response_data['DNS Resource Record'].rdata()
+            except:
+                pass
+            print(f'[*] Respondiendo {direc_ip} (vía {servidor})')
 
-            if direc_ip:
-                print(f'[*] Respondiendo {direc_ip} (vía {servidor})')
-                response_packet = f'{dominio} A {direc_ip}'  #Creamos el paquete de respuesta
-
-            send(response_packet, verbose=0)  #Enviamos la respuesta al cliente
 
         else:  #Si el dominio está en la lista de destinos personalizados
-            idx = dest.index(dominio)  #Obtenemos el índice del dominio en la lista de destinos
-            destination_ip = dest_ips[idx]  #Obtenemos la dirección IP del destino
+            idx = dest.index(dominio)  # Obtenemos el índice del dominio en la lista de destinos
+            destination_ip = dest_ips[idx]  # Obtenemos la dirección IP del destino
+
+            response_packet = DNS(qr=1, id=packet[DNS].id, qdcount=1, qd=packet[DNSQR], ancount=1, an=DNSRR(rrname = packet[DNSQR].qname, ttl = 60, rdata = destination_ip, type = "A" ) )
+                
 
             print(f'[*] Respondiendo {destination_ip} (predeterminado)')
-            response_packet = f'{dominio} A {destination_ip}'  #Creamos el paquete de respuesta
+            # response_packet = f'{dominio} A {destination_ip}'  #Creamos el paquete de respuesta
 
     else:
         print("[*] No se recibió respuesta del servidor DNS remoto")
 
-    dns_socket.sendto(response_packet.encode(), addr)  #Enviamos la respuesta al cliente
+    dns_socket.sendto(bytes(response_packet), addr)  #Enviamos la respuesta al cliente
 
 #Configuramos los argumentos
 parser = argparse.ArgumentParser(description='Servidor DNS proxy')
@@ -71,6 +75,10 @@ dns_socket.bind(('0.0.0.0', puerto))  #Enlazamos el socket a todas las interface
 
 while True:
     print("Esperando consulta...")
-    data, addr = dns_socket.recvfrom(1024)  #Creamos variables para recibir los datos y dirección del cliente
+    try:
+        data, addr = dns_socket.recvfrom(1024)  #Creamos variables para recibir los datos y dirección del cliente
+    except ConnectionResetError:
+        print("Conexion cerrada por el host")
     handle_dns_packet(data, addr, servidor, puerto, dest_ips, dest)  #LLamamos a la funcion handle para el paquete DNS recibido
     print(f"Respondiendo {addr}")  #Imprimimos la dirección del cliente al que le respondimos
+
